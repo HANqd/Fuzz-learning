@@ -1,6 +1,6 @@
 # AFL-Fuzz.c
 ## main函数
-
+```
 int main(int argc, char** argv) {
 
   s32 opt;
@@ -296,3 +296,4 @@ int main(int argc, char** argv) {
     start_time += 4000;
     if (stop_soon) goto stop_fuzzing;
   }
+```
