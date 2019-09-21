@@ -1,5 +1,6 @@
 # AFL-Fuzz.c
 ## main函数
+
 int main(int argc, char** argv) {
 
   s32 opt;
