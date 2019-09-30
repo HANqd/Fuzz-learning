@@ -1,5 +1,6 @@
 ```
-/*
+
+      /*
    american fuzzy lop - file format analyzer
    -----------------------------------------
 
@@ -654,37 +655,37 @@ static void handle_stop_sig(int sig) {
 }
 
 
-/* Do basic preparations - persistent fds, filenames, etc. */
+/* Do basic preparations - persistent fds, filenames, etc. */ //做基本的准备，如fds,文件名等
 
 static void set_up_environment(void) {
 
   u8* x;
 
-  dev_null_fd = open("/dev/null", O_RDWR);
+  dev_null_fd = open("/dev/null", O_RDWR);  //dev/null的fd,open函数打开和创建文件，返回值：成功则返回文件描述符，否则返回-1。O_RDWR读写模式
   if (dev_null_fd < 0) PFATAL("Unable to open /dev/null");
 
-  if (!prog_in) {
+  if (!prog_in) {  //如果目标程序输入文件等于0，为空
 
     u8* use_dir = ".";
 
-    if (access(use_dir, R_OK | W_OK | X_OK)) {
+    if (access(use_dir, R_OK | W_OK | X_OK)) {  //如果use_dir所指文件可读可写可执行
 
-      use_dir = getenv("TMPDIR");
-      if (!use_dir) use_dir = "/tmp";
+      use_dir = getenv("TMPDIR"); //获得TMPDIR环境变量的指针，这个指针指向环境变量的内容， 执行成功则返回指向该内容的指针，找不到符合的环境变量名称则返回NULL
+      if (!use_dir) use_dir = "/tmp";  //如果上一步找不到符合的环境变量名或者没有与之相符的值，令use_dir指向tmp
 
     }
 
-    prog_in = alloc_printf("%s/.afl-analyze-temp-%u", use_dir, getpid());
+    prog_in = alloc_printf("%s/.afl-analyze-temp-%u", use_dir, getpid()); //getpid()返回当前进程标志
 
   }
 
-  /* Set sane defaults... */
+  /* Set sane defaults... */  //设置默认值
 
-  x = getenv("ASAN_OPTIONS");
+  x = getenv("ASAN_OPTIONS");  //x为指向ASAN_OPTIONS环境变量的指针
 
   if (x) {
 
-    if (!strstr(x, "abort_on_error=1"))
+    if (!strstr(x, "abort_on_error=1"))  //strstr(str1,str2) 函数用于判断字符串str2是否是str1的子串。如果是，则该函数返回str2在str1中首次出现的地址；否则，返回NULL。
       FATAL("Custom ASAN_OPTIONS set without abort_on_error=1 - please fix!");
 
     if (!strstr(x, "symbolize=0"))
@@ -728,13 +729,16 @@ static void set_up_environment(void) {
 
 static void setup_signal_handlers(void) {
 
-  struct sigaction sa;
+  struct sigaction sa;  //sigaction（）设置信号处理的接口
 
-  sa.sa_handler   = NULL;
-  sa.sa_flags     = SA_RESTART;
-  sa.sa_sigaction = NULL;
+  sa.sa_handler   = NULL;   //sa_handler此参数和signal()的参数handler相同，代表新的信号处理函数，默认信号处理函数
+  sa.sa_flags     = SA_RESTART;  //sa_flags 用来设置信号处理的其他相关操作，下列的数值可用。SA_RESTART：如果信号中断了进程的某个系统调用，则系统自动启动该系统调用
+  sa.sa_sigaction = NULL;   //成员sa_sigaction 则是另一个信号处理函数，它有三个参数，可以获得关于信号的更详细的信息。
+  //当 sa_flags 成员的值包含了 SA_SIGINFO 标志时，系统将使用 sa_sigaction 函数作为信号处理函数，否则使用 sa_handler 作为信号处理函数。
 
-  sigemptyset(&sa.sa_mask);
+  sigemptyset(&sa.sa_mask);  //该函数的作用是将信号集初始化为空。sa_mask 用来设置在处理该信号时暂时将sa_mask 指定的信号集搁置
+  //我们可以通过信号来终止进程，也可以通过信号来在进程间进行通信，程序也可以通过指定信号的关联处理函数来改变信号的默认处理方式，也可以屏蔽某些信号，使其不能传递给进程。
+  //那么我们应该如何设定我们需要处理的信号，我们不需要处理哪些信号等问题呢？信号集函数就是帮助我们解决这些问题的。
 
   /* Various ways of saying "stop". */
 
@@ -1044,7 +1048,7 @@ int main(int argc, char** argv) {
   use_hex_offsets = !!getenv("AFL_ANALYZE_HEX");
 
   setup_shm();  //创建共享内存
-  setup_signal_handlers();
+  setup_signal_handlers(); //设置信号处理程序
 
   set_up_environment();
 
@@ -1077,6 +1081,7 @@ int main(int argc, char** argv) {
   exit(0);
 
 }
+
 
 
 ```
