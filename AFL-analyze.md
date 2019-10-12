@@ -1,3 +1,8 @@
+这个程序的功能主要是获取输入文件，并尝试解释其结构，通过观察对它的更改，看其是如何影响执行路径的。</br>
+最主要的函数是analyze（）</br>
+
+---
+
 ```
 
       /*
@@ -378,17 +383,17 @@ static void show_char(u8 val) {
 }
 
 
-/* Show the legend */
+/* Show the legend */  展示这些说明，解释
 
 static void show_legend(void) {
 
-  SAYF("    " cLGR bgGRA " 01 " cRST " - no-op block              "
-              cBLK bgLGN " 01 " cRST " - suspected length field\n"
-       "    " cBRI bgGRA " 01 " cRST " - superficial content      "
-              cBLK bgYEL " 01 " cRST " - suspected cksum or magic int\n"
-       "    " cBLK bgCYA " 01 " cRST " - critical stream          "
-              cBLK bgLRD " 01 " cRST " - suspected checksummed block\n"
-       "    " cBLK bgMGN " 01 " cRST " - \"magic value\" section\n\n");
+  SAYF("    " cLGR bgGRA " 01 " cRST " - no-op block              "  //无操作区
+              cBLK bgLGN " 01 " cRST " - suspected length field\n"  //可疑的长度区域，字段
+       "    " cBRI bgGRA " 01 " cRST " - superficial content      "  //表面内容
+              cBLK bgYEL " 01 " cRST " - suspected cksum or magic int\n" //可疑地校验和或魔数
+       "    " cBLK bgCYA " 01 " cRST " - critical stream          "  //关键流
+              cBLK bgLRD " 01 " cRST " - suspected checksummed block\n" //可疑的校验和块
+       "    " cBLK bgMGN " 01 " cRST " - \"magic value\" section\n\n"); //魔数部分
 
 }
 
@@ -550,22 +555,22 @@ static void dump_hex(u8* buf, u32 len, u8* b_data) {
 
 
 
-/* Actually analyze! */
+/* Actually analyze! */   //实际分析
 
 static void analyze(char** argv) {
 
   u32 i;
   u32 boring_len = 0, prev_xff = 0, prev_x01 = 0, prev_s10 = 0, prev_a10 = 0;
 
-  u8* b_data = ck_alloc(in_len + 1);
+  u8* b_data = ck_alloc(in_len + 1); //in_len是输入数据的长度，alloc函数可返回一个指向n个连续字符存储单元的指针，alloc函数的调用者可以利用该指针存储字符序列。返回指向in_len+1个字符的指针。即这个b_data是指向一段长度为in_len+1的一段空间的指针。
   u8  seq_byte = 0;
 
-  b_data[in_len] = 0xff; /* Intentional terminator. */
+  b_data[in_len] = 0xff; /* Intentional terminator. */  //设置b_data数组中最后一个元素in_len的值为0xff，设置结束符。eof（）是C读入文件判断是否读完的函数，0xff是文件结束符，当读到0xff时，就会结束读文件。我理解的这里的意思是读入数据长度为in_len的数据就结束。
 
-  ACTF("Analyzing input file (this may take a while)...\n");
+  ACTF("Analyzing input file (this may take a while)...\n");  //输出：分析输入文件，这可能需要一段时间。
 
 #ifdef USE_COLOR
-  show_legend();
+  show_legend();  //展示说明，对一些参数的解释说明
 #endif /* USE_COLOR */
 
   for (i = 0; i < in_len; i++) {
@@ -575,9 +580,9 @@ static void analyze(char** argv) {
 
     /* Perform walking byte adjustments across the file. We perform four
        operations designed to elicit some response from the underlying
-       code. */
+       code. */ //遍历文件，执行步进字节调整，执行四个操作旨在引起底层代码的某些响应。
 
-    in_data[i] ^= 0xff;
+    in_data[i] ^= 0xff;  //文件的数据分别和0xff异或，然后运行，运行之后的结果给xor_ff
     xor_ff = run_target(argv, in_data, in_len, 0);
 
     in_data[i] ^= 0xfe;
@@ -590,30 +595,30 @@ static void analyze(char** argv) {
     add_10 = run_target(argv, in_data, in_len, 0);
     in_data[i] -= 0x10;
 
-    /* Classify current behavior. */
+    /* Classify current behavior. */ 分类当前行为，对上述四种操作结果进行分类
 
-    xff_orig = (xor_ff == orig_cksum);
+    xff_orig = (xor_ff == orig_cksum); //初始校验和
     x01_orig = (xor_01 == orig_cksum);
     s10_orig = (sub_10 == orig_cksum);
     a10_orig = (add_10 == orig_cksum);
 
     if (xff_orig && x01_orig && s10_orig && a10_orig) {
 
-      b_data[i] = RESP_NONE;
+      b_data[i] = RESP_NONE; //前边定义了RESP_NONE 0x00，改变字节是禁止操作
       boring_len++;
 
     } else if (xff_orig || x01_orig || s10_orig || a10_orig) {
 
-      b_data[i] = RESP_MINOR;
+      b_data[i] = RESP_MINOR; //RESP_MINOP 0x01,一些改变是没有效果的
       boring_len++;
 
     } else if (xor_ff == xor_01 && xor_ff == sub_10 && xor_ff == add_10) {
 
-      b_data[i] = RESP_FIXED;
+      b_data[i] = RESP_FIXED; // RESP_FIXED 0x03 ,变化产生固定模式
 
-    } else b_data[i] = RESP_VARIABLE;
+    } else b_data[i] = RESP_VARIABLE; //RESP_VARIABLE 0x02，变化产生可变路径
 
-    /* When all checksums change, flip most significant bit of b_data. */
+    /* When all checksums change, flip most significant bit of b_data. */ //当所有校验和都改变时，翻转b_data的最高有效位
 
     if (prev_xff != xor_ff && prev_x01 != xor_01 &&
         prev_s10 != sub_10 && prev_a10 != add_10) seq_byte ^= 0x80;
@@ -638,7 +643,7 @@ static void analyze(char** argv) {
     WARNF(cLRD "Encountered %u timeouts - results may be skewed." cRST,
           exec_hangs);
 
-  ck_free(b_data);
+  ck_free(b_data); //释放前边申请的存储空间
 
 }
 
