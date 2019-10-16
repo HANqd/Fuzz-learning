@@ -400,13 +400,13 @@ static void show_legend(void) {
 #endif /* USE_COLOR */
 
 
-/* Interpret and report a pattern in the input file. */
+/* Interpret and report a pattern in the input file. */ //解释并报告输入文件中的模式，对一些字段进行大致分类
 
-static void dump_hex(u8* buf, u32 len, u8* b_data) {
+static void dump_hex(u8* buf, u32 len, u8* b_data) {  //buf:指向输入数据的指针，len:输入数据的长度，b_data:指向分配空间的指针
 
   u32 i;
 
-  for (i = 0; i < len; i++) {
+  for (i = 0; i < len; i++) { //对于输入数据的每个数据，进入循环
 
 #ifdef USE_COLOR
     u32 rlen = 1, off;
@@ -414,37 +414,37 @@ static void dump_hex(u8* buf, u32 len, u8* b_data) {
     u32 rlen = 1;
 #endif /* ^USE_COLOR */
 
-    u8  rtype = b_data[i] & 0x0f;
+    u8  rtype = b_data[i] & 0x0f;  //只保留b_data[i]的最后一位，比如b_data[i]=0x56,则rtype=0x06
 
-    /* Look ahead to determine the length of run. */
+    /* Look ahead to determine the length of run. */  //提前确定运行长度 rlen
 
-    while (i + rlen < len && (b_data[i] >> 7) == (b_data[i + rlen] >> 7)) {
+    while (i + rlen < len && (b_data[i] >> 7) == (b_data[i + rlen] >> 7)) { //i+rlen<len并且b_data[i]和b_data[i+rlen]的最高位相等，进入循环
 
-      if (rtype < (b_data[i + rlen] & 0x0f)) rtype = b_data[i + rlen] & 0x0f;
-      rlen++;
+      if (rtype < (b_data[i + rlen] & 0x0f)) rtype = b_data[i + rlen] & 0x0f;//取b_data[i]的最后一位的最大值
+      rlen++;  //运行长度+1
 
     }
 
-    /* Try to do some further classification based on length & value. */
+    /* Try to do some further classification based on length & value. */ //尝试根据长度和值做进一步的分类。
 
-    if (rtype == RESP_FIXED) {
+    if (rtype == RESP_FIXED) {  //RESP_FIXED:changes produce fixed patterns.  0x03  运行的模式
 
-      switch (rlen) {
+      switch (rlen) {  //运行的长度rlen
 
         case 2: {
 
-            u16 val = *(u16*)(in_data + i);
+            u16 val = *(u16*)(in_data + i);  //val=指向当前第i个输入数据
 
-            /* Small integers may be length fields. */
+            /* Small integers may be length fields. */  //小整数可能是长度字段
 
-            if (val && (val <= in_len || SWAP16(val) <= in_len)) {
-              rtype = RESP_LEN;
+            if (val && (val <= in_len || SWAP16(val) <= in_len)) {  //swap16():将val指向的buf转换成16位整数的数组
+              rtype = RESP_LEN;  //运行类型为长度字段（RESP_LEN:potential length field）
               break;
             }
 
-            /* Uniform integers may be checksums. */
+            /* Uniform integers may be checksums. */  //一致的整数可能是校验和
 
-            if (val && abs(in_data[i] - in_data[i + 1]) > 32) {
+            if (val && abs(in_data[i] - in_data[i + 1]) > 32) {  //不知道这里的绝对值为什么大于32？难道是用的CRC32？
               rtype = RESP_CKSUM;
               break;
             }
@@ -457,7 +457,7 @@ static void dump_hex(u8* buf, u32 len, u8* b_data) {
 
             u32 val = *(u32*)(in_data + i);
 
-            /* Small integers may be length fields. */
+            /* Small integers may be length fields. */  //小整数可能是长度字段
 
             if (val && (val <= in_len || SWAP32(val) <= in_len)) {
               rtype = RESP_LEN;
@@ -479,19 +479,19 @@ static void dump_hex(u8* buf, u32 len, u8* b_data) {
 
         case 1: case 3: case 5 ... MAX_AUTO_EXTRA - 1: break;
 
-        default: rtype = RESP_SUSPECT;
+        default: rtype = RESP_SUSPECT;  //可能是可疑的点
 
       }
 
     }
 
-    /* Print out the entire run. */
+    /* Print out the entire run. */  //打印整个运行
 
 #ifdef USE_COLOR
 
     for (off = 0; off < rlen; off++) {
 
-      /* Every 16 digits, display offset. */
+      /* Every 16 digits, display offset. */  //每十六位显示偏移
 
       if (!((i + off) % 16)) {
 
@@ -504,7 +504,7 @@ static void dump_hex(u8* buf, u32 len, u8* b_data) {
 
       }
 
-      switch (rtype) {
+      switch (rtype) {  //打印运行类型
 
         case RESP_NONE:     SAYF(cLGR bgGRA); break;
         case RESP_MINOR:    SAYF(cBRI bgGRA); break;
@@ -516,7 +516,7 @@ static void dump_hex(u8* buf, u32 len, u8* b_data) {
 
       }
 
-      show_char(in_data[i + off]);
+      show_char(in_data[i + off]);  //这个函数就是把输入数据显示成我们可读的字符
 
       if (off != rlen - 1 && (i + off + 1) % 16) SAYF(" "); else SAYF(cRST " ");
 
@@ -552,6 +552,7 @@ static void dump_hex(u8* buf, u32 len, u8* b_data) {
 #endif /* USE_COLOR */
 
 }
+
 
 
 
@@ -632,16 +633,16 @@ static void analyze(char** argv) {
 
   } 
 
-  dump_hex(in_data, in_len, b_data);
+  dump_hex(in_data, in_len, b_data);  //解释和报告输入文件的模式，对输入数据进行大致分类
 
   SAYF("\n");
 
   OKF("Analysis complete. Interesting bits: %0.02f%% of the input file.",
-      100.0 - ((double)boring_len * 100) / in_len);
+      100.0 - ((double)boring_len * 100) / in_len);  
 
-  if (exec_hangs)
+  if (exec_hangs)  //exec_hangs:程序产生挂起的次数
     WARNF(cLRD "Encountered %u timeouts - results may be skewed." cRST,
-          exec_hangs);
+          exec_hangs);  //遇到exec_hangs个超时，结果可能会有偏斜
 
   ck_free(b_data); //释放前边申请的存储空间
 
@@ -1055,10 +1056,10 @@ int main(int argc, char** argv) {
   setup_shm();  //创建共享内存
   setup_signal_handlers(); //设置信号处理程序
 
-  set_up_environment();
+  set_up_environment(); //设置环境
 
-  find_binary(argv[optind]);
-  detect_file_args(argv + optind);
+  find_binary(argv[optind]);  //找二进制文件
+  detect_file_args(argv + optind);  //在参数中检测@@
 
   if (qemu_mode)
     use_argv = get_qemu_argv(argv[0], argv + optind, argc - optind);
@@ -1067,12 +1068,12 @@ int main(int argc, char** argv) {
 
   SAYF("\n");
 
-  read_initial_file();
+  read_initial_file();  //读取初始文件
 
   ACTF("Performing dry run (mem limit = %llu MB, timeout = %u ms%s)...",
        mem_limit, exec_tmout, edges_only ? ", edges only" : "");
 
-  run_target(use_argv, in_data, in_len, 1);
+  run_target(use_argv, in_data, in_len, 1);  //运行
 
   if (child_timed_out)
     FATAL("Target binary times out (adjusting -t may help).");
