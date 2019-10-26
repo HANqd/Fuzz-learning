@@ -423,13 +423,17 @@ static void dump_hex(u8* buf, u32 len, u8* b_data) {  //buf:指向输入数据�
     while (i + rlen < len && (b_data[i] >> 7) == (b_data[i + rlen] >> 7)) { //i+rlen<len并且b_data[i]和b_data[i+rlen]的最高位相等，进入循环
 
       if (rtype < (b_data[i + rlen] & 0x0f)) rtype = b_data[i + rlen] & 0x0f;//取b_data[i]的最后一位的最大值
-      rlen++;  //运行长度+1
+      rlen++;  //连续最高位相等的字节个数
 
     }
+    //上述示例：初始条件i=0,rlen=1,b_data[i]=1000 0000,b_data[i+rlen]=1001 0001.
+    //b_data[i]>>7=0000 0001 ,b_data[i+rlen]=0000 0001 ,长度符合，进入循环。
+    //(b_data[i + rlen] & 0x0f)=0000 0001，b_data[i] & 0x0f=0000 0000，那么rtype=0x01
+    //rlen++,若满足条件，继续循环。我理解的：这里循环的意思是对每个字节进行比较，更新rlen和rtype
 
     /* Try to do some further classification based on length & value. */ //尝试根据长度和值做进一步的分类。
 
-    if (rtype == RESP_FIXED) {  //RESP_FIXED:changes produce fixed patterns.  0x03  运行的模式
+    if (rtype == RESP_FIXED) {  //RESP_FIXED:changes produce fixed patterns.  //rtype=0x03，即改变这些字节的任何位都会产生相同的结果，这里就是告诉我们如何得到这些字节
 
       switch (rlen) {  //运行的长度rlen
 
@@ -481,7 +485,7 @@ static void dump_hex(u8* buf, u32 len, u8* b_data) {  //buf:指向输入数据�
 
         case 1: case 3: case 5 ... MAX_AUTO_EXTRA - 1: break;
 
-        default: rtype = RESP_SUSPECT;  //可能是可疑的点
+        default: rtype = RESP_SUSPECT;  // blob
 
       }
 
@@ -506,7 +510,7 @@ static void dump_hex(u8* buf, u32 len, u8* b_data) {  //buf:指向输入数据�
 
       }
 
-      switch (rtype) {  //打印运行类型
+      switch (rtype) {  //对每种字段类型进行输出
 
         case RESP_NONE:     SAYF(cLGR bgGRA); break;
         case RESP_MINOR:    SAYF(cBRI bgGRA); break;
@@ -518,7 +522,7 @@ static void dump_hex(u8* buf, u32 len, u8* b_data) {  //buf:指向输入数据�
 
       }
 
-      show_char(in_data[i + off]);  //这个函数就是把输入数据显示成我们可读的字符
+      show_char(in_data[i + off]);  //对输入字节进行颜色编号
 
       if (off != rlen - 1 && (i + off + 1) % 16) SAYF(" "); else SAYF(cRST " ");
 
