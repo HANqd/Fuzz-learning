@@ -1,3 +1,5 @@
+AFL的介绍文件中这样介绍analyze工具：它需要一个输入文件，尝试顺序翻转字节，并观察被测试程序的行为。 然后，根据哪些部分看起来很关键，哪些不是关键部分，对输入进行颜色编码。 尽管不安全，它通常可以快速洞察复杂的文件格式。</br>
+
 这个程序的功能主要是获取输入文件，并尝试解释其结构，通过观察对它的更改，看其是如何影响执行路径的。</br>
 最主要的函数是analyze（）</br>
 
@@ -583,48 +585,50 @@ static void analyze(char** argv) {
        operations designed to elicit some response from the underlying
        code. */ //遍历文件，执行步进字节调整，执行四个操作旨在引起底层代码的某些响应。
 
-    in_data[i] ^= 0xff;  //文件的数据分别和0xff异或，然后运行，运行之后的结果给xor_ff
-    xor_ff = run_target(argv, in_data, in_len, 0);
+    in_data[i] ^= 0xff;
+    xor_ff = run_target(argv, in_data, in_len, 0);//每位进行翻转
 
-    in_data[i] ^= 0xfe;
+    in_data[i] ^= 0xfe; //前7位翻转，最后一位保持不变。
     xor_01 = run_target(argv, in_data, in_len, 0);
 
-    in_data[i] = (in_data[i] ^ 0x01) - 0x10;
+    in_data[i] = (in_data[i] ^ 0x01) - 0x10;//前四位的最后一位如果是1，则结果是前四位和后四位的最后一位翻转，其他不变，如10011100->10001101（只影响第四位和第八位）
+    //前四位的最后一位是0，则前四位倒数第一个1翻转和后四位的最后一位翻转。如10001100->00001101,01101100->01001101（影响前四位和第八位）
     sub_10 = run_target(argv, in_data, in_len, 0);
 
-    in_data[i] += 0x20;
+    in_data[i] += 0x20; //0x20=0010 0000 ，影响第二位（有进位）和第三位
     add_10 = run_target(argv, in_data, in_len, 0);
-    in_data[i] -= 0x10;
+    in_data[i] -= 0x10;//0x10=0001 0000，影响前四位（有借位）
 
-    /* Classify current behavior. */ 分类当前行为，对上述四种操作结果进行分类
+//以上操作是分别对不同的位进行翻转操作，观察每次翻转之后目标二进制文件的行为
+    /* Classify current behavior. *///根据以上操作，可对某些信息进行分类
 
-    xff_orig = (xor_ff == orig_cksum); //初始校验和
+    xff_orig = (xor_ff == orig_cksum);
     x01_orig = (xor_01 == orig_cksum);
     s10_orig = (sub_10 == orig_cksum);
     a10_orig = (add_10 == orig_cksum);
 
     if (xff_orig && x01_orig && s10_orig && a10_orig) {
 
-      b_data[i] = RESP_NONE; //前边定义了RESP_NONE 0x00，改变字节是禁止操作
+      b_data[i] = RESP_NONE;//无操作块，即改变这些块不会引发任何对控制流的更改（比如像素数据等）
       boring_len++;
 
     } else if (xff_orig || x01_orig || s10_orig || a10_orig) {
 
-      b_data[i] = RESP_MINOR; //RESP_MINOP 0x01,一些改变是没有效果的
+      b_data[i] = RESP_MINOR;//较长的blob显示此属性，即改变是没有影响的。（校验和或加密的数据）blob释义:一小片
       boring_len++;
 
     } else if (xor_ff == xor_01 && xor_ff == sub_10 && xor_ff == add_10) {
 
-      b_data[i] = RESP_FIXED; // RESP_FIXED 0x03 ,变化产生固定模式
+      b_data[i] = RESP_FIXED; //检验和，魔数，其中任何位翻转都会导致程序执行相同的变化。
 
-    } else b_data[i] = RESP_VARIABLE; //RESP_VARIABLE 0x02，变化产生可变路径
+    } else b_data[i] = RESP_VARIABLE; //纯粹的数据部分，其中分析器注入的变化始终引起控制流程的不同变化。
 
-    /* When all checksums change, flip most significant bit of b_data. */ //当所有校验和都改变时，翻转b_data的最高有效位
+    /* When all checksums change, flip most significant bit of b_data. */
 
     if (prev_xff != xor_ff && prev_x01 != xor_01 &&
-        prev_s10 != sub_10 && prev_a10 != add_10) seq_byte ^= 0x80;
+        prev_s10 != sub_10 && prev_a10 != add_10) seq_byte ^= 0x80; //翻转最高位 0x80=1000 0000
 
-    b_data[i] |= seq_byte;
+    b_data[i] |= seq_byte; //按位或
 
     prev_xff = xor_ff;
     prev_x01 = xor_01;
