@@ -599,7 +599,7 @@ static void analyze(char** argv) {
     add_10 = run_target(argv, in_data, in_len, 0);
     in_data[i] -= 0x10;//0x10=0001 0000，影响前四位（有借位）
 
-//以上操作是分别对不同的位进行翻转操作，观察每次翻转之后目标二进制文件的行为
+//以上操作是分别对一个字节不同的位进行翻转操作，观察每次翻转之后目标二进制文件的行为
     /* Classify current behavior. *///根据以上操作，可对某些信息进行分类
 
     xff_orig = (xor_ff == orig_cksum);
